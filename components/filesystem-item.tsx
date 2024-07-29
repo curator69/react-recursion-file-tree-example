@@ -3,12 +3,13 @@
 import { ChevronRightIcon } from "@heroicons/react/16/solid";
 import { DocumentIcon, FolderIcon } from "@heroicons/react/24/solid";
 import { AnimatePresence, motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 type Node = {
   id?: string;
   name: string;
   nodes?: Node[];
+  isOpen?: boolean; // New property to control open state
 };
 
 export function FilesystemItemAnimated({
@@ -16,6 +17,7 @@ export function FilesystemItemAnimated({
   addNode,
   deleteNode,
   setContextMenu,
+  updateNodeOpenState, // New prop to update node open state
 }: {
   node: Node;
   addNode: (type: "folder" | "file", parentNode: Node) => void;
@@ -23,16 +25,25 @@ export function FilesystemItemAnimated({
   setContextMenu: (
     contextMenu: { x: number; y: number; node: Node | null } | null
   ) => void;
+  updateNodeOpenState: (nodeId: string, isOpen: boolean) => void;
 }) {
-  let [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(node.isOpen || false);
+
+  useEffect(() => {
+    setIsOpen(node.isOpen || false);
+  }, [node.isOpen]);
+
+  const handleToggle = () => {
+    const newIsOpen = !isOpen;
+    setIsOpen(newIsOpen);
+    updateNodeOpenState(node.id!, newIsOpen);
+  };
 
   return (
     <li key={node.name}>
       <span
         className="flex items-center gap-1.5 py-1 cursor-pointer relative"
-        onClick={() => {
-          setIsOpen(!isOpen);
-        }}
+        onClick={handleToggle}
         onContextMenu={(e) => {
           e.preventDefault();
           setContextMenu({ x: e.clientX, y: e.clientY, node });
@@ -69,13 +80,14 @@ export function FilesystemItemAnimated({
             transition={{ type: "spring", bounce: 0, duration: 0.4 }}
             className="pl-6 overflow-hidden flex flex-col justify-end"
           >
-            {node.nodes?.map((node) => (
+            {node.nodes?.map((childNode) => (
               <FilesystemItemAnimated
-                node={node}
-                key={node.name}
+                node={childNode}
+                key={childNode.name}
                 addNode={addNode}
                 deleteNode={deleteNode}
                 setContextMenu={setContextMenu}
+                updateNodeOpenState={updateNodeOpenState}
               />
             ))}
           </motion.ul>

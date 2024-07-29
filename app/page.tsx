@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { FilesystemItemAnimated } from "../components/filesystem-item";
 import crypto from "crypto";
 
@@ -16,6 +16,12 @@ export default function Page() {
     parentNode: Node | null;
   } | null>(null);
   const [newName, setNewName] = useState("");
+
+  const updateNodeOpenState = useCallback((nodeId: string, isOpen: boolean) => {
+    setNodes((prevNodes) =>
+      updateNodeOpenStateRecursively(prevNodes, nodeId, isOpen)
+    );
+  }, []);
 
   const addNode = (type: "folder" | "file", parentNode: Node) => {
     setPopup({ type, parentNode });
@@ -60,6 +66,7 @@ export default function Page() {
 
     const updatedNodes = addNodeRecursively(nodes, popup.parentNode, newNode);
     setNodes(updatedNodes);
+    updateNodeOpenState(popup.parentNode.id!, true);
     setPopup(null);
     setNewName("");
   };
@@ -74,6 +81,7 @@ export default function Page() {
             addNode={addNode}
             deleteNode={deleteNode}
             setContextMenu={setContextMenu}
+            updateNodeOpenState={updateNodeOpenState}
           />
         ))}
       </ul>
@@ -208,6 +216,25 @@ const deleteNodeRecursively = (nodes: Node[], targetNode: Node): Node[] => {
     .filter(Boolean) as Node[];
 };
 
+const updateNodeOpenStateRecursively = (
+  nodes: Node[],
+  nodeId: string,
+  isOpen: boolean
+): Node[] => {
+  return nodes.map((node) => {
+    if (node.id === nodeId) {
+      return { ...node, isOpen };
+    }
+    if (node.nodes) {
+      return {
+        ...node,
+        nodes: updateNodeOpenStateRecursively(node.nodes, nodeId, isOpen),
+      };
+    }
+    return node;
+  });
+};
+
 const addNodeRecursively = (
   nodes: Node[],
   parentNode: Node,
@@ -215,9 +242,16 @@ const addNodeRecursively = (
 ): Node[] => {
   return nodes.map((node) => {
     if (node.id === parentNode.id) {
-      node.nodes = [...(node.nodes || []), newNode];
+      return {
+        ...node,
+        nodes: [...(node.nodes || []), newNode],
+        isOpen: true, // Ensure the parent folder is open
+      };
     } else if (node.nodes) {
-      node.nodes = addNodeRecursively(node.nodes, parentNode, newNode);
+      return {
+        ...node,
+        nodes: addNodeRecursively(node.nodes, parentNode, newNode),
+      };
     }
     return node;
   });
