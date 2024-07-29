@@ -177,18 +177,24 @@ const generateHash = (secret: any) => {
 };
 
 const generateNodes = (nodes: Node[]): Node[] => {
-  return nodes.map((node) => {
-    const hashedNode: Node = {
-      ...node,
-      id: generateHash(node.name),
-    };
+  return nodes
+    .map((node) => {
+      const hashedNode: Node = {
+        ...node,
+        id: generateHash(node.name),
+      };
 
-    if (node.nodes && node.nodes.length > 0) {
-      hashedNode.nodes = generateNodes(node.nodes);
-    }
+      if (node.nodes && node.nodes.length > 0) {
+        hashedNode.nodes = generateNodes(node.nodes);
+      }
 
-    return hashedNode;
-  });
+      return hashedNode;
+    })
+    .sort((a, b) => {
+      if (a.nodes && !b.nodes) return -1; // Folders before files
+      if (!a.nodes && b.nodes) return 1; // Files after folders
+      return 0; // Maintain original order if both are files or both are folders
+    });
 };
 
 const deleteNodeRecursively = (nodes: Node[], targetNode: Node): Node[] => {
